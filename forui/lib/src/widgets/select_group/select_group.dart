@@ -24,21 +24,33 @@ class FSelectGroupItemData<T> extends InheritedWidget {
   /// The style.
   final FSelectGroupStyle style;
 
+  /// True if the [FSelectGroup] is enabled.
+  final bool enabled;
+
   /// True if the item is selected.
   final bool selected;
+
+  /// True if the [FSelectGroup] is in an error state.
+  final bool error;
 
   /// The [FSelectGroup]'s item data.
   const FSelectGroupItemData({
     required this.controller,
     required this.style,
+    required this.enabled,
     required this.selected,
+    required this.error,
     required super.child,
     super.key,
   });
 
   @override
   bool updateShouldNotify(FSelectGroupItemData old) =>
-      controller != old.controller || style != old.style || selected != old.selected;
+      controller != old.controller ||
+      style != old.style ||
+      enabled != old.enabled ||
+      selected != old.selected ||
+      error != old.error;
 
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
@@ -46,7 +58,9 @@ class FSelectGroupItemData<T> extends InheritedWidget {
     properties
       ..add(DiagnosticsProperty('controller', controller))
       ..add(DiagnosticsProperty('style', style))
-      ..add(FlagProperty('selected', value: selected, ifTrue: 'selected'));
+      ..add(FlagProperty('enabled', value: enabled, ifTrue: 'enabled'))
+      ..add(FlagProperty('selected', value: selected, ifTrue: 'selected'))
+      ..add(FlagProperty('error', value: error, ifTrue: 'error'));
   }
 }
 
@@ -55,6 +69,8 @@ class FSelectGroupItemData<T> extends InheritedWidget {
 /// Typically used to group multiple [FSelectGroupItemMixin]s.
 ///
 /// For touch devices, a [FSelectTileGroup] is generally recommended over this.
+///
+/// {@macro forui.widgets.label.error_transition}
 ///
 /// See:
 /// * https://forui.dev/docs/form/select-group for working examples.
@@ -211,6 +227,8 @@ class _FSelectGroupState<T> extends State<FSelectGroup<T>> {
                     controller: _controller,
                     style: groupStyle,
                     selected: _controller.contains(child.value),
+                    enabled: widget.enabled,
+                    error: state.errorText != null,
                     child: child,
                   ),
                 ),
@@ -254,25 +272,28 @@ class FSelectGroupStyle extends FLabelStyle with Diagnosticable, _$FSelectGroupS
     super.descriptionPadding,
     super.errorPadding,
     super.childPadding,
+    super.labelMotion,
   });
 
   /// Creates a [FSelectGroupStyle] that inherits its properties.
   factory FSelectGroupStyle.inherit({required FColors colors, required FTypography typography, required FStyle style}) {
     final vertical = FLabelStyles.inherit(style: style).verticalStyle;
 
-    final labelTextStyle = FVariants<FFormFieldVariantConstraint, TextStyle, TextStyleDelta>.delta(
+    final itemLabelTextStyle = FVariants<FFormFieldVariantConstraint, TextStyle, TextStyleDelta>.delta(
       typography.sm.copyWith(color: colors.primary, fontWeight: .w500),
       variants: {
+        [.error]: .delta(color: colors.error),
         [.disabled]: .delta(color: colors.disable(colors.primary)),
+        [.disabled.and(.error)]: .delta(color: colors.disable(colors.error)),
       },
     );
-    final descriptionTextStyle = FVariants<FFormFieldVariantConstraint, TextStyle, TextStyleDelta>.delta(
+    final itemDescriptionTextStyle = FVariants<FFormFieldVariantConstraint, TextStyle, TextStyleDelta>.delta(
       typography.sm.copyWith(color: colors.mutedForeground),
       variants: {
         [.disabled]: .delta(color: colors.disable(colors.mutedForeground)),
       },
     );
-    final errorTextStyle = FVariants<FFormFieldErrorVariantConstraint, TextStyle, TextStyleDelta>.delta(
+    final itemErrorTextStyle = FVariants<FFormFieldErrorVariantConstraint, TextStyle, TextStyleDelta>.delta(
       typography.sm.copyWith(color: colors.error, fontWeight: .w500),
       variants: {
         [.disabled]: .delta(color: colors.disable(colors.error)),
@@ -281,14 +302,14 @@ class FSelectGroupStyle extends FLabelStyle with Diagnosticable, _$FSelectGroupS
 
     return .new(
       checkboxStyle: .inherit(colors: colors, style: style).copyWith(
-        labelTextStyle: .value(labelTextStyle),
-        descriptionTextStyle: .value(descriptionTextStyle),
-        errorTextStyle: .value(errorTextStyle),
+        labelTextStyle: .value(itemLabelTextStyle),
+        descriptionTextStyle: .value(itemDescriptionTextStyle),
+        errorTextStyle: .value(itemErrorTextStyle),
       ),
       radioStyle: .inherit(colors: colors, style: style).copyWith(
-        labelTextStyle: .value(labelTextStyle),
-        descriptionTextStyle: .value(descriptionTextStyle),
-        errorTextStyle: .value(errorTextStyle),
+        labelTextStyle: .value(itemLabelTextStyle),
+        descriptionTextStyle: .value(itemDescriptionTextStyle),
+        errorTextStyle: .value(itemErrorTextStyle),
       ),
       labelTextStyle: style.formFieldStyle.labelTextStyle,
       descriptionTextStyle: style.formFieldStyle.descriptionTextStyle,

@@ -41,6 +41,8 @@ part 'tile_group.design.dart';
 /// );
 /// ```
 ///
+/// {@macro forui.widgets.label.error_transition}
+///
 ///
 /// See:
 /// * https://forui.dev/docs/tile/tile-group for working examples.
@@ -388,6 +390,7 @@ class FTileGroupStyle extends FLabelStyle with _$FTileGroupStyleFunctions {
     super.descriptionPadding = const .only(top: 7.5),
     super.errorPadding = const .only(top: 5),
     super.childPadding,
+    super.labelMotion,
   });
 
   /// Creates a [FTileGroupStyle] that inherits from the given arguments.

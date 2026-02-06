@@ -136,6 +136,12 @@ are not available for most of these changes due to the tool's limitations.
 * **Breaking** Rename `FHeaderAction.onStateChange` to `FHeaderAction.onVariantChange`.
 
 
+### `FLabel`
+* Add transition between different states.
+
+* Add `FLabelMotion`.
+
+
 ### `FItem` & `FItemGroup`
 * Add destructive `FItem` variant.
 * Add default styling for selected `FItem`s.
@@ -156,6 +162,20 @@ are not available for most of these changes due to the tool's limitations.
 * Change error message when given unbounded constraints to be more descriptive.
 
 
+### `FPopover`
+* Change `FPopoverController(motion: ...)` from `FPopoverMotion` to `FPopoverMotionDelta`.
+
+
+### `FRadio`
+* Add transition between different states. 
+* Add `FRadioMotion.transitionDuration`.
+* Add `FRadioMotion.transitionCurve`.
+
+* **Breaking** Rename `FRadioMotion.duration` to `FRadioMotion.selectDuration`.
+* **Breaking** Rename `FRadioMotion.reverseDuration` to `FRadioMotion.unselectDuration`.
+* **Breaking** Rename `FRadioMotion.curve` to `FRadioMotion.selectCurve`.
+
+
 ### `FSelect` & `FMultiSelect`
 * **Breaking** Add `enabled` parameter to `FMultiSelectTagBuilder` at position 1 (after `context`).
 
@@ -168,6 +188,12 @@ are not available for most of these changes due to the tool's limitations.
 * Restore `FSelect.contentScrollHandle`.
 
 * Fix `FMultiSelect` still allowing tags to be removed when disabled.
+
+
+### `FSelectGroup`
+* Add transition between different states.
+
+* Fix `FSelectGroupItem`s not inheriting disabled and error state from `FSelectGroup`.
 
 
 ### `FSelectTile`
@@ -189,11 +215,15 @@ are not available for most of these changes due to the tool's limitations.
 ### `FTabs`
 * Add `FTabs.expands`.
 
+* Change `FTabController(motion: ...)` from `FTabMotion` to `FTabMotionDelta`.
+
 
 ### `FTappable`
-* **Breaking** Rename `FTappable.onStateChange` to `FTappable.onVariantChange`.
+* Add `FTappableMotion.bounceFloor` to limit maximum shrink to an absolute pixel value regardless of widget size.
+
 * **Breaking** Change `FTappableVariantChangeCallback` signature from `void Function(Set<FTappableVariant>)` to
 `void Function(Set<FTappableVariant> previous, Set<FTappableVariant> current)`.
+* **Breaking** Rename `FTappable.onStateChange` to `FTappable.onVariantChange`.
 
 
 ### `FTile` & `FTileGroup`
@@ -218,6 +248,8 @@ are not available for most of these changes due to the tool's limitations.
 
 ### `FTheme`
 * Add `FTheme.textDirection`.
+* Add `FTheme.tooltipGroupActiveDuration`.
+* Add `FBasicTheme.tooltipGroupActiveDuration`.
 
 * **Breaking** Rename `FTheme` to `FBasicTheme`.
 * **Breaking** Rename `FAnimatedTheme` to `FTheme`.
@@ -232,6 +264,13 @@ are not available for most of these changes due to the tool's limitations.
 * **Breaking** Remove `FThemeData.tileStyle`.
 
 * **Breaking** Change `FThemeData.copyWith(...)` to accept `Delta`s instead of callbacks.
+
+
+### `FTooltip`
+* Add `FTooltipGroup` for grouping tooltips so subsequent ones appear instantly after the first.
+
+* Change `FTooltip` fields to be nullable and inherit from the enclosing `FTooltipGroup`.
+* Change `FTooltipController(motion: ...)` from `FTooltipMotion` to `FTooltipMotionDelta`.
 
 
 ### `FTimeField`

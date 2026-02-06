@@ -29,6 +29,12 @@ part 'label.design.dart';
 /// |-----------------|
 /// ```
 ///
+/// {@template forui.widgets.label.error_transition}
+/// ## Error transition caveats
+/// Error transitions require either a [label] or [description] to function. In the rare case where only an `error` is
+/// needed, set [label] or [description] to an empty widget, e.g. [SizedBox.shrink].
+/// {@endtemplate}
+///
 /// See:
 /// * https://forui.dev/docs/form/label for working examples.
 /// * [FLabelStyles] for customizing a label's appearance.
@@ -98,12 +104,15 @@ class FLabel extends StatelessWidget {
       .vertical => context.theme.labelStyles.verticalStyle,
     });
 
+    // This messes up error transitions if a label and description weren't previously provided. However, it is an
+    // extremely rare edge case to want an error message without a label & description.
+    // In those cases, users can just set label/description to an empty SizedBox().
     if (label == null && description == null && error == null) {
       return Padding(padding: style.childPadding, child: child);
     }
 
     return switch (axis) {
-      .horizontal => _FHorizontalLabel(
+      .horizontal => _HorizontalLabel(
         style: style,
         label: label,
         description: description,
@@ -111,7 +120,7 @@ class FLabel extends StatelessWidget {
         variants: variants,
         child: child,
       ),
-      .vertical => _FVerticalLabel(
+      .vertical => _VerticalLabel(
         style: style,
         label: label,
         description: description,
@@ -133,7 +142,7 @@ class FLabel extends StatelessWidget {
   }
 }
 
-class _FHorizontalLabel extends StatelessWidget {
+abstract class _Label extends StatefulWidget {
   final FLabelStyle style;
   final Widget? label;
   final Widget? description;
@@ -141,7 +150,7 @@ class _FHorizontalLabel extends StatelessWidget {
   final Set<FFormFieldVariant> variants;
   final Widget child;
 
-  const _FHorizontalLabel({
+  const _Label({
     required this.style,
     required this.label,
     required this.description,
@@ -150,6 +159,141 @@ class _FHorizontalLabel extends StatelessWidget {
     required this.child,
   });
 
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties
+      ..add(DiagnosticsProperty('style', style))
+      ..add(IterableProperty('variants', variants));
+  }
+}
+
+abstract class _State<T extends _Label> extends State<T> with TickerProviderStateMixin {
+  late final AnimationController _sizeController;
+  late final AnimationController _fadeController;
+  late final CurvedAnimation _curvedSize;
+  late final CurvedAnimation _curvedFade;
+  late Animation<double> _fade;
+  Widget? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final motion = widget.style.labelMotion;
+    final value = widget.variants.contains(FFormFieldVariant.error) ? 1.0 : 0.0;
+    _sizeController = AnimationController(
+      vsync: this,
+      value: value,
+      duration: motion.errorExpandDuration,
+      reverseDuration: motion.errorCollapseDuration,
+    )..addStatusListener(_clearError);
+    _fadeController = AnimationController(
+      vsync: this,
+      value: value,
+      duration: motion.errorFadeInDuration,
+      reverseDuration: motion.errorFadeOutDuration,
+    )..addStatusListener(_clearError);
+    _curvedSize = CurvedAnimation(
+      parent: _sizeController,
+      curve: motion.errorExpandCurve,
+      reverseCurve: motion.errorCollapseCurve,
+    );
+    _curvedFade = CurvedAnimation(
+      parent: _fadeController,
+      curve: motion.errorFadeInCurve,
+      reverseCurve: motion.errorFadeOutCurve,
+    );
+    _fade = motion.errorFadeTween.animate(_fadeController);
+
+    if (widget.variants.contains(FFormFieldVariant.error)) {
+      _error = widget.error;
+    }
+  }
+
+  void _clearError(AnimationStatus status) {
+    if (_sizeController.isDismissed && _fadeController.isDismissed) {
+      setState(() => _error = null);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant T old) {
+    super.didUpdateWidget(old);
+    if (old.style.labelMotion != widget.style.labelMotion) {
+      final motion = widget.style.labelMotion;
+      _sizeController
+        ..duration = motion.errorExpandDuration
+        ..reverseDuration = motion.errorCollapseDuration;
+      _fadeController
+        ..duration = motion.errorFadeInDuration
+        ..reverseDuration = motion.errorFadeOutDuration;
+      _curvedSize
+        ..curve = motion.errorExpandCurve
+        ..reverseCurve = motion.errorCollapseCurve;
+      _curvedFade
+        ..curve = motion.errorFadeInCurve
+        ..reverseCurve = motion.errorFadeOutCurve;
+      _fade = motion.errorFadeTween.animate(_curvedFade);
+    }
+
+    if (widget.variants.contains(FFormFieldVariant.error)) {
+      _error = widget.error;
+      _sizeController.forward();
+      _fadeController.forward();
+    } else {
+      _fadeController.reverse();
+      _sizeController.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _curvedFade.dispose();
+    _curvedSize.dispose();
+    _fadeController.dispose();
+    _sizeController.dispose();
+    super.dispose();
+  }
+
+  Widget _animatedError(BuildContext context, [TextHeightBehavior? behavior]) => AnimatedBuilder(
+    animation: _curvedSize,
+    builder: (context, child) => Align(
+      alignment: AlignmentDirectional.topStart,
+      heightFactor: _curvedSize.value,
+      widthFactor: 1.0,
+      child: child,
+    ),
+    child: FadeTransition(
+      opacity: _fade,
+      child: Padding(
+        padding: widget.style.errorPadding,
+        child: AnimatedDefaultTextStyle(
+          style: widget.style.errorTextStyle.resolve(widget.variants),
+          duration: widget.style.labelMotion.textStyleTransitionDuration,
+          curve: widget.style.labelMotion.textStyleTransitionCurve,
+          textHeightBehavior: behavior,
+          child: _error!,
+        ),
+      ),
+    ),
+  );
+}
+
+class _HorizontalLabel extends _Label {
+  const _HorizontalLabel({
+    required super.style,
+    required super.label,
+    required super.description,
+    required super.error,
+    required super.variants,
+    required super.child,
+  });
+
+  @override
+  State<_HorizontalLabel> createState() => _HorizontalState();
+}
+
+class _HorizontalState extends _State<_HorizontalLabel> {
   @override
   Widget build(BuildContext context) => Table(
     defaultColumnWidth: const IntrinsicColumnWidth(),
@@ -159,45 +303,44 @@ class _FHorizontalLabel extends StatelessWidget {
       TableRow(
         children: [
           TableCell(
-            child: Padding(padding: style.childPadding, child: child),
+            child: Padding(padding: widget.style.childPadding, child: widget.child),
           ),
-          if (label != null)
-            _buildCell(padding: style.labelPadding, textStyle: style.labelTextStyle.resolve(variants), child: label)
+          if (widget.label != null)
+            _cell(
+              padding: widget.style.labelPadding,
+              textStyle: widget.style.labelTextStyle.resolve(widget.variants),
+              child: widget.label,
+            )
           else
-            _buildCell(
-              padding: style.descriptionPadding,
-              textStyle: style.descriptionTextStyle.resolve(variants),
-              child: description,
+            _cell(
+              padding: widget.style.descriptionPadding,
+              textStyle: widget.style.descriptionTextStyle.resolve(widget.variants),
+              child: widget.description,
             ),
         ],
       ),
-      if (label != null && description != null)
+      if (widget.label != null && widget.description != null)
         TableRow(
           children: [
             const TableCell(child: SizedBox()),
-            _buildCell(
-              padding: style.descriptionPadding,
-              textStyle: style.descriptionTextStyle.resolve(variants),
-              child: description,
+            _cell(
+              padding: widget.style.descriptionPadding,
+              textStyle: widget.style.descriptionTextStyle.resolve(widget.variants),
+              child: widget.description,
             ),
           ],
         ),
-      if (error != null && variants.contains(FFormFieldVariant.error))
+      if (_error != null)
         TableRow(
           children: [
             const TableCell(child: SizedBox()),
-            TableCell(
-              child: Padding(
-                padding: style.errorPadding,
-                child: DefaultTextStyle(style: style.errorTextStyle.resolve(variants), child: error!),
-              ),
-            ),
+            TableCell(child: _animatedError(context)),
           ],
         ),
     ],
   );
 
-  Widget _buildCell({required EdgeInsetsGeometry padding, required TextStyle textStyle, Widget? child}) {
+  Widget _cell({required EdgeInsetsGeometry padding, required TextStyle textStyle, Widget? child}) {
     if (child == null) {
       return const TableCell(child: SizedBox());
     }
@@ -205,7 +348,12 @@ class _FHorizontalLabel extends StatelessWidget {
     return TableCell(
       child: Padding(
         padding: padding,
-        child: DefaultTextStyle(style: textStyle, child: child),
+        child: AnimatedDefaultTextStyle(
+          style: textStyle,
+          duration: widget.style.labelMotion.textStyleTransitionDuration,
+          curve: widget.style.labelMotion.textStyleTransitionCurve,
+          child: child,
+        ),
       ),
     );
   }
@@ -214,68 +362,69 @@ class _FHorizontalLabel extends StatelessWidget {
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
     properties
-      ..add(StringProperty('style', style.toString()))
-      ..add(IterableProperty('variants', variants));
+      ..add(StringProperty('style', widget.style.toString()))
+      ..add(IterableProperty('variants', widget.variants));
   }
 }
 
-class _FVerticalLabel extends StatelessWidget {
-  final FLabelStyle style;
-  final Widget? label;
-  final Widget? description;
-  final Widget? error;
+class _VerticalLabel extends _Label {
   final bool expands;
-  final Set<FFormFieldVariant> variants;
-  final Widget child;
 
-  const _FVerticalLabel({
-    required this.style,
-    required this.label,
-    required this.description,
-    required this.error,
+  const _VerticalLabel({
+    required super.style,
+    required super.label,
+    required super.description,
+    required super.error,
+    required super.variants,
+    required super.child,
     required this.expands,
-    required this.variants,
-    required this.child,
   });
 
+  @override
+  State<_VerticalLabel> createState() => _VerticalLabelState();
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(FlagProperty('expands', value: expands, ifTrue: 'expands'));
+  }
+}
+
+class _VerticalLabelState extends _State<_VerticalLabel> {
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: .start,
     mainAxisSize: .min,
     children: [
-      if (label != null)
+      if (widget.label != null)
         Padding(
-          padding: style.labelPadding,
-          child: DefaultTextStyle(
-            style: style.labelTextStyle.resolve(variants),
+          padding: widget.style.labelPadding,
+          child: AnimatedDefaultTextStyle(
+            style: widget.style.labelTextStyle.resolve(widget.variants),
+            duration: widget.style.labelMotion.textStyleTransitionDuration,
+            curve: widget.style.labelMotion.textStyleTransitionCurve,
             textHeightBehavior: const TextHeightBehavior(applyHeightToFirstAscent: false),
-            child: label!,
+            child: widget.label!,
           ),
         ),
-      if (expands)
+      if (widget.expands)
         Expanded(
-          child: Padding(padding: style.childPadding, child: child),
+          child: Padding(padding: widget.style.childPadding, child: widget.child),
         )
       else
-        Padding(padding: style.childPadding, child: child),
-      if (description != null)
+        Padding(padding: widget.style.childPadding, child: widget.child),
+      if (widget.description != null)
         Padding(
-          padding: style.descriptionPadding,
-          child: DefaultTextStyle(
-            style: style.descriptionTextStyle.resolve(variants),
+          padding: widget.style.descriptionPadding,
+          child: AnimatedDefaultTextStyle(
+            style: widget.style.descriptionTextStyle.resolve(widget.variants),
+            duration: widget.style.labelMotion.textStyleTransitionDuration,
+            curve: widget.style.labelMotion.textStyleTransitionCurve,
             textHeightBehavior: const TextHeightBehavior(applyHeightToFirstAscent: false),
-            child: description!,
+            child: widget.description!,
           ),
         ),
-      if (error != null && variants.contains(FFormFieldVariant.error))
-        Padding(
-          padding: style.errorPadding,
-          child: DefaultTextStyle(
-            style: style.errorTextStyle.resolve(variants),
-            textHeightBehavior: const TextHeightBehavior(applyHeightToFirstAscent: false),
-            child: error!,
-          ),
-        ),
+      if (_error != null) _animatedError(context, const TextHeightBehavior(applyHeightToFirstAscent: false)),
     ],
   );
 
@@ -283,9 +432,9 @@ class _FVerticalLabel extends StatelessWidget {
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
     properties
-      ..add(StringProperty('style', style.toString()))
-      ..add(FlagProperty('expands', value: expands, ifTrue: 'expands'))
-      ..add(IterableProperty('variants', variants));
+      ..add(StringProperty('style', widget.style.toString()))
+      ..add(FlagProperty('expands', value: widget.expands, ifTrue: 'expands'))
+      ..add(IterableProperty('variants', widget.variants));
   }
 }
 
@@ -336,6 +485,10 @@ class FLabelStyle extends FFormFieldStyle with _$FLabelStyleFunctions {
   @override
   final EdgeInsetsGeometry childPadding;
 
+  /// The motion properties for error animations.
+  @override
+  final FLabelMotion labelMotion;
+
   /// Creates a [FLabelStyle].
   const FLabelStyle({
     required super.labelTextStyle,
@@ -345,6 +498,7 @@ class FLabelStyle extends FFormFieldStyle with _$FLabelStyleFunctions {
     this.descriptionPadding = .zero,
     this.errorPadding = .zero,
     this.childPadding = .zero,
+    this.labelMotion = const FLabelMotion(),
   });
 
   /// Creates a [FLabelStyle].
@@ -354,9 +508,90 @@ class FLabelStyle extends FFormFieldStyle with _$FLabelStyleFunctions {
     this.descriptionPadding = .zero,
     this.errorPadding = .zero,
     this.childPadding = .zero,
+    this.labelMotion = const FLabelMotion(),
   }) : super(
          labelTextStyle: style.formFieldStyle.labelTextStyle,
          descriptionTextStyle: style.formFieldStyle.descriptionTextStyle,
          errorTextStyle: style.formFieldStyle.errorTextStyle,
        );
+}
+
+/// Motion-related properties for [FLabel] animations.
+class FLabelMotion with Diagnosticable, _$FLabelMotionFunctions {
+  /// A [FLabelMotion] with no motion effects.
+  static const FLabelMotion none = FLabelMotion(
+    textStyleTransitionDuration: .zero,
+    errorExpandDuration: .zero,
+    errorCollapseDuration: .zero,
+    errorFadeInDuration: .zero,
+    errorFadeOutDuration: .zero,
+    errorFadeTween: noErrorFadeTween,
+  );
+
+  /// The default error fade tween.
+  static const FImmutableTween<double> defaultErrorFadeTween = FImmutableTween(begin: 0.4, end: 1.0);
+
+  /// A tween that does not fade the error.
+  static const FImmutableTween<double> noErrorFadeTween = FImmutableTween(begin: 1.0, end: 1.0);
+
+  /// The text style transition duration. Defaults to 100ms.
+  @override
+  final Duration textStyleTransitionDuration;
+
+  /// The text style transition curve. Defaults to [Curves.linear].
+  @override
+  final Curve textStyleTransitionCurve;
+
+  /// The error expansion duration. Defaults to 100ms.
+  @override
+  final Duration errorExpandDuration;
+
+  /// The error collapse duration. Defaults to 100ms.
+  @override
+  final Duration errorCollapseDuration;
+
+  /// The error expansion curve. Defaults to [Curves.easeOut].
+  @override
+  final Curve errorExpandCurve;
+
+  /// The error collapse curve. Defaults to [Curves.easeOut].
+  @override
+  final Curve errorCollapseCurve;
+
+  /// The error fade in duration. Defaults to 100ms.
+  @override
+  final Duration errorFadeInDuration;
+
+  /// The error fade out duration. Defaults to 100ms.
+  @override
+  final Duration errorFadeOutDuration;
+
+  /// The error fade in curve. Defaults to [Curves.linear].
+  @override
+  final Curve errorFadeInCurve;
+
+  /// The error fade out curve. Defaults to [Curves.linear].
+  @override
+  final Curve errorFadeOutCurve;
+
+  /// The error fade tween. Defaults to [defaultErrorFadeTween].
+  ///
+  /// Set to [noErrorFadeTween] to disable the fade effect.
+  @override
+  final Animatable<double> errorFadeTween;
+
+  /// Creates a [FLabelMotion].
+  const FLabelMotion({
+    this.textStyleTransitionDuration = const Duration(milliseconds: 100),
+    this.textStyleTransitionCurve = Curves.linear,
+    this.errorExpandDuration = const Duration(milliseconds: 100),
+    this.errorCollapseDuration = const Duration(milliseconds: 100),
+    this.errorExpandCurve = Curves.easeOut,
+    this.errorCollapseCurve = Curves.easeOut,
+    this.errorFadeInDuration = const Duration(milliseconds: 100),
+    this.errorFadeOutDuration = const Duration(milliseconds: 100),
+    this.errorFadeInCurve = Curves.linear,
+    this.errorFadeOutCurve = Curves.linear,
+    this.errorFadeTween = defaultErrorFadeTween,
+  });
 }
