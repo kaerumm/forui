@@ -34,27 +34,37 @@ void main() {
   tearDown(() => focusNode.dispose());
 
   group('FTappable', () {
+    testWidgets('focused when enabled', (tester) async {
+      await tester.pumpWidget(
+        TestScaffold(
+          child: FTappable(focusNode: focusNode, builder: (_, states, _) => Text('$states'), onPress: () {}),
+        ),
+      );
+      expect(find.text(set(true).toString()), findsOneWidget);
+
+      focusNode.requestFocus();
+      await tester.pumpAndSettle();
+      expect(
+        find.text({...set(true), FTappableVariant.focused, FTappableVariant.primaryFocused}.toString()),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('cannot focus when disabled', (tester) async {
+      await tester.pumpWidget(
+        TestScaffold(
+          child: FTappable(focusNode: focusNode, builder: (_, states, _) => Text('$states')),
+        ),
+      );
+      expect(find.text(set(false).toString()), findsOneWidget);
+
+      focusNode.requestFocus();
+      await tester.pumpAndSettle();
+      expect(find.text(set(false).toString()), findsOneWidget);
+      expect(focusNode.hasFocus, false);
+    });
+
     for (final enabled in [true, false]) {
-      testWidgets('focused - $enabled', (tester) async {
-        await tester.pumpWidget(
-          TestScaffold(
-            child: FTappable(
-              focusNode: focusNode,
-              builder: (_, states, _) => Text('$states'),
-              onPress: enabled ? () {} : null,
-            ),
-          ),
-        );
-        expect(find.text(set(enabled).toString()), findsOneWidget);
-
-        focusNode.requestFocus();
-        await tester.pumpAndSettle();
-        expect(
-          find.text({...set(enabled), FTappableVariant.focused, FTappableVariant.primaryFocused}.toString()),
-          findsOneWidget,
-        );
-      });
-
       testWidgets('hovered - $enabled', (tester) async {
         await tester.pumpWidget(
           TestScaffold(
@@ -280,27 +290,37 @@ void main() {
   });
 
   group('FTappable.static', () {
+    testWidgets('focused when enabled', (tester) async {
+      await tester.pumpWidget(
+        TestScaffold(
+          child: FTappable.static(focusNode: focusNode, builder: (_, states, _) => Text('$states'), onPress: () {}),
+        ),
+      );
+      expect(find.text(set(true).toString()), findsOneWidget);
+
+      focusNode.requestFocus();
+      await tester.pumpAndSettle();
+      expect(
+        find.text({...set(true), FTappableVariant.focused, FTappableVariant.primaryFocused}.toString()),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('cannot request focus when disabled', (tester) async {
+      await tester.pumpWidget(
+        TestScaffold(
+          child: FTappable.static(focusNode: focusNode, builder: (_, states, _) => Text('$states')),
+        ),
+      );
+      expect(find.text(set(false).toString()), findsOneWidget);
+
+      focusNode.requestFocus();
+      await tester.pumpAndSettle();
+      expect(find.text(set(false).toString()), findsOneWidget);
+      expect(focusNode.hasFocus, false);
+    });
+
     for (final enabled in [true, false]) {
-      testWidgets('focused - $enabled', (tester) async {
-        await tester.pumpWidget(
-          TestScaffold(
-            child: FTappable.static(
-              focusNode: focusNode,
-              builder: (_, states, _) => Text('$states'),
-              onPress: enabled ? () {} : null,
-            ),
-          ),
-        );
-        expect(find.text(set(enabled).toString()), findsOneWidget);
-
-        focusNode.requestFocus();
-        await tester.pumpAndSettle();
-        expect(
-          find.text({...set(enabled), FTappableVariant.focused, FTappableVariant.primaryFocused}.toString()),
-          findsOneWidget,
-        );
-      });
-
       testWidgets('hovered - $enabled', (tester) async {
         await tester.pumpWidget(
           TestScaffold(
@@ -435,6 +455,20 @@ void main() {
       expect(find.text(set(false).toString()), findsOneWidget);
     });
 
+    testWidgets('disabled tappable cannot request focus', (tester) async {
+      await tester.pumpWidget(
+        TestScaffold(
+          child: FTappable.static(focusNode: focusNode, builder: (_, states, _) => Text('$states')),
+        ),
+      );
+      expect(find.text(set(false).toString()), findsOneWidget);
+
+      focusNode.requestFocus();
+      await tester.pumpAndSettle();
+      expect(find.text(set(false).toString()), findsOneWidget);
+      expect(focusNode.hasFocus, false);
+    });
+
     testWidgets('enabled when secondary press given', (tester) async {
       await tester.pumpWidget(
         TestScaffold(
@@ -527,7 +561,7 @@ void main() {
           focusNode: focus,
           onPress: focus.requestFocus,
           onVariantChange: (_, current) => focused = current.contains(FTappableVariant.focused),
-          focusedOutlineStyle: FThemes.zinc.light.style.focusedOutlineStyle,
+          focusedOutlineStyle: FThemes.neutral.light.style.focusedOutlineStyle,
           child: const Text('focus'),
         ),
       ),
@@ -548,7 +582,7 @@ void main() {
       TestScaffold.app(
         child: FTappable(
           onVariantChange: (_, current) => focused = current.contains(FTappableVariant.focused),
-          focusedOutlineStyle: FThemes.zinc.light.style.focusedOutlineStyle,
+          focusedOutlineStyle: FThemes.neutral.light.style.focusedOutlineStyle,
           child: FButton(onPress: focus.requestFocus, focusNode: focus, child: const Text('focus')),
         ),
       ),

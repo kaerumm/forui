@@ -104,6 +104,7 @@ are not available for most of these changes due to the tool's limitations.
 
 
 ### `FButton`
+* Change `FButtonVariant.outline` background color from transparent to `background`.
 * **Breaking** Rename `FButton.onStateChange` to `FButton.onVariantChange`.
 * **Breaking** Rename `FButtonData.states` to `FButtonData.variants`.
 
@@ -225,6 +226,8 @@ are not available for most of these changes due to the tool's limitations.
 `void Function(Set<FTappableVariant> previous, Set<FTappableVariant> current)`.
 * **Breaking** Rename `FTappable.onStateChange` to `FTappable.onVariantChange`.
 
+* Fix disabled `FTappable` still being able to receive focus.
+
 
 ### `FTile` & `FTileGroup`
 * Add destructive `FItem` variant.
@@ -246,11 +249,14 @@ are not available for most of these changes due to the tool's limitations.
 * Change `FTextFieldStyle.obscureButtonStyle` to not bounce by default.
 
 
-### `FTheme`
+### `FTheme` & `FThemes`
 * Add `FTheme.textDirection`.
 * Add `FTheme.tooltipGroupActiveDuration`.
 * Add `FBasicTheme.tooltipGroupActiveDuration`.
+* Add `FThemes.neutral`.
+* Add `FColors.lerpColor(...)`.
 
+* **Breaking** Change `FThemes` colors to match latest shadcn/ui.
 * **Breaking** Rename `FTheme` to `FBasicTheme`.
 * **Breaking** Rename `FAnimatedTheme` to `FTheme`.
 * **Breaking** Rename `FAnimatedThemeMotion` to `FThemeMotion`.
