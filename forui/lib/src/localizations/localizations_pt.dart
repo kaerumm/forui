@@ -61,7 +61,7 @@ class FLocalizationsPt extends FLocalizations {
   }
 
   @override
-  String get barrierLabel => 'Scrim';
+  String get barrierLabel => 'Barreira';
 
   @override
   String barrierOnTapHint(String modalRouteContentName) {
@@ -87,10 +87,10 @@ class FLocalizationsPt extends FLocalizations {
   String get dialogSemanticsLabel => 'Caixa de diálogo';
 
   @override
-  String get paginationPreviousSemanticsLabel => 'Previous';
+  String get paginationPreviousSemanticsLabel => 'Anterior';
 
   @override
-  String get paginationNextSemanticsLabel => 'Next';
+  String get paginationNextSemanticsLabel => 'Próxima';
 
   @override
   String get popoverSemanticsLabel => 'Janela sobreposta';
@@ -108,7 +108,7 @@ class FLocalizationsPt extends FLocalizations {
   String get selectSearchHint => 'Pesquisar';
 
   @override
-  String get selectNoResults => 'No matches found.';
+  String get selectNoResults => 'Nenhum resultado encontrado.';
 
   @override
   String get selectScrollUpSemanticsLabel => 'Rolar para cima';
@@ -117,13 +117,13 @@ class FLocalizationsPt extends FLocalizations {
   String get selectScrollDownSemanticsLabel => 'Rolar para baixo';
 
   @override
-  String get sheetSemanticsLabel => 'inferior';
+  String get sheetSemanticsLabel => 'Seção';
 
   @override
   String get textFieldEmailLabel => 'E-mail';
 
   @override
-  String get textFieldClearButtonSemanticsLabel => 'Clear';
+  String get textFieldClearButtonSemanticsLabel => 'Limpar';
 
   @override
   String get passwordFieldLabel => 'Senha';
